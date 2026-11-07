@@ -209,7 +209,7 @@ function newGame(custom){
   if (custom) w = custom;
   else do { w = pool[Math.floor(Math.random()*pool.length)] } while (pool.length > 1 && w === (G && G.answer));
   G = {answer:w, guesses:[], patterns:[], cur:Array(cfg.len).fill(''), pos:0, over:false, won:false, hintsUsed:0,
-       hintPos:{}, hintIn:[], hintOut:[], kb:{}, busy:false};
+       joker:true, pending:'', hintPos:{}, hintIn:[], hintOut:[], kb:{}, busy:false};
   buildBoard(); buildKeyboard(); renderAll();
 }
 
@@ -271,7 +271,7 @@ function renderAll(){
     }
   }
   renderKeys(); renderHints();
-  $('#info').textContent = G.over ? '' : `${G.guesses.length+1} / ${cfg.tries} 번째 시도${G.hintsUsed?' · 힌트 '+G.hintsUsed+'회':''}`;
+  $('#info').textContent = G.over ? '' : `${G.guesses.length+1} / ${cfg.tries} 번째 시도${G.hintsUsed?' · 힌트 '+G.hintsUsed+'회':''} · 없는 단어 ${G.joker?1:0}회 가능`;
   document.querySelectorAll('.hbtn').forEach(b=>b.disabled=G.over);
 }
 function renderKeys(){
@@ -311,8 +311,8 @@ function movePos(d){
   G.pos = Math.max(0, Math.min(cfg.len-1, G.pos+d)); renderAll();
 }
 function rowEl(){ return $('#board').children[G.guesses.length] }
-function shake(msg){
-  toast(msg); const r=rowEl(); r.classList.remove('shake'); void r.offsetWidth; r.classList.add('shake');
+function shake(msg, ms){
+  toast(msg, ms); const r=rowEl(); r.classList.remove('shake'); void r.offsetWidth; r.classList.add('shake');
 }
 function hardModeError(guess){
   for (let r=0;r<G.guesses.length;r++){
@@ -328,8 +328,14 @@ function submit(){
   if (G.over || G.busy) return;
   const g = G.cur.join('');
   if (g.length < cfg.len) return shake('빈 칸이 있어요');
-  if (!VALID[cfg.len].has(g)) return shake('사전에 없는 단어예요');
+  let useJoker = false;
+  if (!VALID[cfg.len].has(g)){
+    if (!G.joker) return shake('사전에 없는 단어예요');
+    if (G.pending !== g){ G.pending = g; return shake('사전에 없는 단어예요 · Enter를 한 번 더 누르면 1회 그대로 제출해요', 3200) }
+    useJoker = true;
+  }
   if (cfg.hard){ const e = hardModeError(g); if (e) return shake(e) }
+  if (useJoker){ G.joker = false; G.pending = ''; toast('사전에 없는 단어 기회를 사용했어요') }
   const pat = evaluate(g, G.answer);
   G.busy = true;
   const rIdx = G.guesses.length, tiles = rowEl().children;
