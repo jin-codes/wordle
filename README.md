@@ -20,6 +20,7 @@ A classic Wordle puzzle with adjustable difficulty, unlimited free hints, and no
 - **Accessibility & comfort** — colorblind mode, light/dark/system theme, on-screen and physical keyboard.
 - **English / 한국어 UI** — English by default; switch in Settings.
 - Stats (played, win %, streak) are stored locally in your browser.
+- **Korean Wordle (`ko.html`)** — three ways to play: *Jamo split* (one tile per consonant/vowel), *Syllable* (compose whole syllables, with initial/vowel/final indicator bars), and *Choseong* (initial consonants given). Unlimited hints, including meaning hints.
 
 ## Run locally
 

@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>한글 워들</title>
+<style>
+
+:root{
+  --bg:#ffffff;--fg:#1a1a1b;--muted:#6b6b6e;--line:#d3d6da;--tile:#ffffff;--key:#d3d6da;--keyfg:#1a1a1b;
+  --correct:#6aaa64;--present:#c9b458;--absent:#787c7e;--panel:#f6f7f8;--accent:#538d4e;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121213;--fg:#f8f8f8;--muted:#9a9aa0;--line:#3a3a3c;--tile:#121213;--key:#818384;--keyfg:#fff;
+  --correct:#538d4e;--present:#b59f3b;--absent:#3a3a3c;--panel:#1d1d1f;
+}}
+:root[data-theme="dark"]{
+  --bg:#121213;--fg:#f8f8f8;--muted:#9a9aa0;--line:#3a3a3c;--tile:#121213;--key:#818384;--keyfg:#fff;
+  --correct:#538d4e;--present:#b59f3b;--absent:#3a3a3c;--panel:#1d1d1f;
+}
+:root[data-contrast="1"]{--correct:#f5793a;--present:#85c0f9}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{height:100%}body{min-height:100%;min-height:100dvh}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+header{width:100%;max-width:520px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+header .side{display:flex}header .side.right{justify-content:flex-end}
+header .title{text-align:center}
+header h1{margin:0;font-size:24px;letter-spacing:.14em;font-weight:800;line-height:1.1}
+header .sub{font-size:11.5px;color:var(--muted);margin-top:3px}
+.iconbtn{background:none;border:0;color:var(--fg);width:40px;height:40px;display:grid;place-items:center;border-radius:10px;cursor:pointer}
+.iconbtn:hover{background:var(--panel)}
+.iconbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+main>*{flex-shrink:0}
+main{flex:1;width:100%;max-width:520px;display:flex;flex-direction:column;align-items:center;padding:0 16px 12px;gap:10px;min-height:0}
+#info{font-size:12.5px;color:var(--muted);margin-top:6px;text-align:center;min-height:18px;letter-spacing:.02em}
+#board{display:grid;gap:6px;margin:6px 0}
+.row{display:grid;gap:6px;grid-template-columns:repeat(var(--cols),1fr)}
+.tile{width:var(--ts);height:var(--ts);border:2px solid var(--line);border-radius:6px;background:var(--tile);display:flex;align-items:center;justify-content:center;font-size:calc(var(--ts)*.55);font-weight:800;text-transform:uppercase;user-select:none}
+.row .tile.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tile{cursor:pointer}
+.tile.filled{border-color:#878a8c;animation:pop .1s}
+.tile.hint{color:var(--correct);opacity:.7;border:2px dashed var(--correct)}
+.tile.correct,.tile.present,.tile.absent{color:#fff;border-color:transparent}
+.tile.correct{background:var(--correct)}.tile.present{background:var(--present)}.tile.absent{background:var(--absent)}
+.tile.flip{animation:flip .5s ease both}
+.row.shake{animation:shake .5s}
+.row.win .tile{animation:bounce .8s ease both;animation-delay:calc(var(--i)*100ms)}
+@keyframes pop{50%{transform:scale(1.1)}}
+@keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+@keyframes shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(3px)}30%,50%,70%{transform:translateX(-5px)}40%,60%{transform:translateX(5px)}}
+@keyframes bounce{0%,20%{transform:translateY(0)}40%{transform:translateY(-18px)}50%{transform:translateY(4px)}60%{transform:translateY(-8px)}80%{transform:translateY(2px)}100%{transform:translateY(0)}}
+#hintbar{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.hbtn{border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;padding:8px 4px;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;gap:2px;align-items:center;transition:border-color .15s,transform .1s}
+.hbtn b{font-size:14px}.hbtn span{font-size:10.5px;color:var(--muted)}
+.hbtn:hover{border-color:var(--accent)}.hbtn:active{transform:scale(.97)}
+.hbtn:disabled{opacity:.4;cursor:default}
+#hints{width:100%;font-size:13px;display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;align-items:center;padding:0}
+#hints:not(:empty){background:var(--panel);border-radius:10px;padding:8px 10px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:center}
+.chip{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 7px;border-radius:5px;font-size:12px;font-weight:700;text-transform:uppercase;color:#fff}
+.chip.in{background:var(--present)}.chip.out{background:var(--absent)}.chip.pos{background:var(--correct)}
+.lbl{color:var(--muted);margin-right:2px}
+#keyboard{width:100%;display:flex;flex-direction:column;gap:6px;margin-top:auto;padding-top:6px;padding-bottom:env(safe-area-inset-bottom)}
+.krow{display:flex;gap:6px;justify-content:center}
+.key{flex:1;max-width:44px;height:54px;border:0;border-radius:8px;transition:background .2s,transform .08s;background:var(--key);color:var(--keyfg);font:inherit;font-weight:700;font-size:14px;text-transform:uppercase;cursor:pointer;padding:0;user-select:none}
+.key:active{transform:scale(.95)}
+.key.wide{flex:1.5;max-width:66px;font-size:12px;display:flex;align-items:center;justify-content:center}
+.key.correct{background:var(--correct);color:#fff}.key.present{background:var(--present);color:#fff}.key.absent{background:var(--absent);color:#fff}
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+dialog{border:0;border-radius:14px;background:var(--bg);color:var(--fg);padding:20px;width:min(440px,92vw);box-shadow:0 10px 40px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog h2{margin:0 0 14px;font-size:19px}
+dialog{max-height:90vh;overflow:auto}
+dialog h3{margin:16px 0 6px;font-size:13px;color:var(--muted);font-weight:600}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.presets button,.seg button{border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:13px;padding:9px 4px;border-radius:8px;cursor:pointer}
+.presets button.on,.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mine{display:flex;flex-wrap:wrap;gap:6px}
+.mine .m{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.mine .m button{border:0;background:none;color:var(--fg);font:inherit;font-size:12.5px;padding:8px 9px;cursor:pointer}
+.mine .m .x{color:var(--muted);padding:8px 8px;border-left:1px solid var(--line)}
+.mine .add{border:1px dashed var(--muted);border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:12.5px;padding:8px 10px;cursor:pointer}
+.mine .none{color:var(--muted);font-size:12.5px;align-self:center}
+.cw{display:flex;gap:6px}
+.cw input{flex:1;min-width:0;font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);text-transform:lowercase}
+.cw .btn{flex:none;padding:10px 12px;font-size:13px}
+.seg{display:flex;gap:6px}.seg button{flex:1}
+.opt{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;font-size:14px;border-bottom:1px solid var(--line)}
+.opt small{display:block;color:var(--muted);font-size:12px}
+input[type=range]{width:150px;accent-color:var(--accent)}
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .2s;margin:0}
+input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+input[type=checkbox]:checked{background:var(--accent)}input[type=checkbox]:checked::after{transform:translateX(20px)}
+a.lnk{color:var(--accent);font-size:14px;text-decoration:none;white-space:nowrap}
+select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.actions{display:flex;gap:8px;margin-top:16px}
+.btn{flex:1;border:0;border-radius:10px;padding:12px;font:inherit;font-weight:700;cursor:pointer;background:var(--accent);color:#fff}
+.btn.sec{background:var(--panel);color:var(--fg);border:1px solid var(--line)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;gap:6px;margin:6px 0}
+.stats b{display:block;font-size:26px}.stats span{font-size:11px;color:var(--muted)}
+.help p{margin:6px 0;font-size:14px;line-height:1.5}
+.ex{display:flex;gap:4px;margin:4px 0}.ex .tile{--ts:34px;font-size:18px}
+#result .big{font-size:22px;font-weight:800;margin-bottom:4px}
+#result .ans{font-size:28px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+
+.row{display:flex;gap:6px;justify-content:center;grid-template-columns:none}
+.cell{display:flex;flex-direction:column;gap:3px;align-items:center}
+.cell.sp{margin-left:8px}
+.tile.rv{animation:flipc .5s ease both;animation-delay:calc(var(--i)*250ms)}
+.tile.correct{--c:var(--correct)}.tile.present{--c:var(--present)}.tile.absent{--c:var(--absent)}
+@keyframes flipc{0%{transform:rotateX(0);background:var(--tile);border-color:#878a8c;color:var(--fg)}49%{transform:rotateX(90deg);background:var(--tile);border-color:#878a8c;color:var(--fg)}50%{transform:rotateX(90deg);background:var(--c);border-color:transparent;color:#fff}100%{transform:rotateX(0);background:var(--c);border-color:transparent;color:#fff}}
+.pips{display:flex;gap:3px;height:5px;width:var(--ts)}
+.pip{flex:1;border-radius:3px;background:var(--line);opacity:.5}
+.pip.correct{background:var(--correct);opacity:1}.pip.present{background:var(--present);opacity:1}.pip.absent{background:var(--absent);opacity:1}
+.pip.none{background:transparent}
+.pips.late{animation:fadein .3s both;animation-delay:calc(var(--n)*250ms + 250ms)}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.tile.syl{font-size:calc(var(--ts)*.62)}
+.tile.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tile.hint{color:var(--correct);opacity:.7;border:2px dashed var(--correct)}
+.tabs{display:flex;gap:6px;width:100%;margin-top:10px}
+.tabs button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-weight:700;font-size:14px;padding:9px 4px;border-radius:10px;cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#clue:empty{display:none}
+#modeDesc{font-size:12px;color:var(--muted);text-align:center;min-height:16px}
+#clue{display:flex;gap:6px;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+#clue .chip{font-size:20px;min-width:34px;height:34px;background:var(--accent);border-radius:8px}
+#preview{min-height:26px;font-size:18px;font-weight:700;letter-spacing:.06em;text-align:center}
+#preview small{font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0;display:block}
+#hintbar{grid-template-columns:repeat(5,1fr)}
+#hintbar.four{grid-template-columns:repeat(4,1fr)}
+.key{max-width:46px;height:50px;font-size:17px;text-transform:none}
+.key.wide{flex:1.5;max-width:64px;font-size:12px;display:flex;align-items:center;justify-content:center}
+.key.on{background:var(--accent);color:#fff}
+.hbtn span{font-size:10px}
+a.lnk{color:var(--accent);font-size:14px;text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="side"><button class="iconbtn" id="btnHelp" aria-label="도움말"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8M12 17h.01"/></svg></button></div>
+  <div class="title"><h1>한글 워들</h1><div class="sub" id="modeLabel"></div></div>
+  <div class="side right"><button class="iconbtn" id="btnStats" aria-label="통계"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></svg></button><button class="iconbtn" id="btnSet" aria-label="설정"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button></div>
+</header>
+<main>
+  <div class="tabs" id="tabs">
+    <button data-m="jamo">자모 분리</button><button data-m="syl">글자 완성</button><button data-m="cho">초성</button>
+  </div>
+  <div id="modeDesc"></div>
+  <div id="clue"></div>
+  <div id="info"></div>
+  <div id="board" aria-label="게임 보드"></div>
+  <div id="preview"></div>
+  <div id="hintbar">
+    <button class="hbtn" data-h="pos"><b>위치</b><span>자리 공개</span></button>
+    <button class="hbtn" data-h="in"><b>포함</b><span>들어간 글자</span></button>
+    <button class="hbtn" data-h="out"><b>제외</b><span>없는 글자</span></button>
+    <button class="hbtn" data-h="cho"><b>초성</b><span>초성 보기</span></button>
+    <button class="hbtn" data-h="mean"><b>뜻</b><span>설명 힌트</span></button>
+  </div>
+  <div id="hints"></div>
+  <div id="keyboard"></div>
+</main>
+<div id="toast"></div>
+
+<dialog id="dSet">
+  <h2>설정</h2>
+  <h3 style="margin-top:0" id="lenTitle">글자 수</h3>
+  <div class="seg" id="segLen"></div>
+  <div class="opt"><div>도전 횟수 <b id="tryVal"></b></div><input type="range" id="tries" min="3" max="10"></div>
+  <div class="opt"><div>색약 모드<small>주황/파랑 색상</small></div><input type="checkbox" id="contrast"></div>
+  <div class="opt"><div>테마</div><select id="theme"><option value="auto">시스템</option><option value="light">라이트</option><option value="dark">다크</option></select></div>
+  <div class="opt" style="border:0"><div>English Wordle</div><a class="lnk" href="index.html">열기 →</a></div>
+  <div class="actions"><button class="btn sec" id="setClose">닫기</button><button class="btn" id="setApply">적용하고 새 게임</button></div>
+</dialog>
+
+<dialog id="dStats">
+  <h2>통계</h2>
+  <div class="stats"><div><b id="sPlayed">0</b><span>플레이</span></div><div><b id="sWin">0</b><span>승률 %</span></div><div><b id="sStreak">0</b><span>연승</span></div><div><b id="sMax">0</b><span>최다 연승</span></div></div>
+  <div class="actions"><button class="btn sec" id="statsReset">기록 초기화</button><button class="btn" data-close>닫기</button></div>
+</dialog>
+
+<dialog id="dHelp" class="help">
+  <h2>게임 방법</h2>
+  <p>숨은 한글 단어를 정해진 횟수 안에 맞히세요. 입력 후 <b>확인</b>(Enter)을 누르면 색이 나타납니다. <b>초록</b>=자리까지 맞음, <b>노랑</b>=있지만 자리가 다름, <b>회색</b>=없음.</p>
+  <h3>① 자모 분리</h3>
+  <p>칸 하나가 자음/모음 하나예요. 예: <b>꼬들</b> = ㄲ ㅗ ㄷ ㅡ ㄹ. 쌍자음은 ⇧로 입력하고, <b>ㅘ</b>는 ㅗ+ㅏ, <b>ㄳ</b>은 ㄱ+ㅅ처럼 나눠서 넣어요. 소리 없는 첫 자음은 <b>ㅇ</b>을 직접 입력해야 해요. 입력하는 동안 아래에 완성된 글자가 미리 보여요.</p>
+  <h3>② 글자 완성</h3>
+  <p>칸 하나가 글자 하나예요. 자음·모음 키로 글자를 만들면 돼요. 글자 아래 <b>세 개의 작은 막대</b>가 초성·중성·종성의 정답 여부를 알려 줘요.</p>
+  <h3>③ 초성</h3>
+  <p>정답의 초성이 주어져요. 그 초성에 맞는 단어를 입력하고, 중성·종성을 막대로 추리해 보세요.</p>
+  <p>💡 <b>힌트는 무제한·무료</b>예요. 광고도 없어요. 사전 검사는 하지 않아서, 글자가 만들어지면 어떤 조합이든 제출할 수 있어요.</p>
+  <div class="actions"><button class="btn" data-close>알겠어요</button></div>
+</dialog>
+
+<dialog id="dResult"><div id="result"></div>
+  <div class="actions"><button class="btn sec" id="rShare">결과 복사</button><button class="btn" id="rNew">새 게임</button></div>
+</dialog>
+
+<script id="words" type="text/plain">
+사과|과일|빨갛고 아삭한, 백설공주가 먹은 과일
+포도|과일|송이로 달리는 보라색 열매
+수박|과일|여름에 먹는 크고 초록 줄무늬 과일
+참외|과일|노랗고 줄무늬가 있는 여름 과일
+딸기|과일|빨갛고 씨가 겉에 박힌 과일
+바나나|과일|노랗고 껍질을 까서 먹는 긴 과일
+복숭아|과일|분홍빛에 털이 보송한 여름 과일
+오렌지|과일|주황색 둥근 감귤류 과일
+자두|과일|새콤달콤한 보라빛 작은 과일
+감자|채소|땅속에서 자라는 둥근 덩이줄기
+고구마|채소|군고구마로 먹는 달콤한 뿌리
+당근|채소|토끼가 좋아하는 주황색 뿌리
+양파|채소|까면 눈물이 나는 채소
+마늘|채소|매운 향이 강한 양념 채소
+오이|채소|초록색 길쭉한 채소
+호박|채소|단단하고 노란 큰 열매, 할로윈의 상징
+버섯|채소|숲에서 자라는 갓 모양의 식재료
+김치|음식|한국의 대표 발효 음식
+라면|음식|끓는 물에 면과 스프를 넣는 간편식
+비빔밥|음식|여러 나물을 밥에 비벼 먹는 음식
+떡볶이|음식|고추장 양념의 쫄깃한 떡 요리
+불고기|음식|양념한 소고기를 구운 요리
+김밥|음식|김으로 밥과 속재료를 말아 만든 음식
+만두|음식|밀가루 피에 소를 넣어 빚은 음식
+국수|음식|가늘고 긴 면 요리
+햄버거|음식|빵 사이에 고기 패티를 넣은 음식
+피자|음식|치즈와 토핑을 얹은 둥근 이탈리아 음식
+우유|음료|소에서 얻는 하얀 음료
+주스|음료|과일을 짜서 만든 음료
+커피|음료|원두로 내린 쓴 갈색 음료
+초콜릿|간식|카카오로 만든 달콤한 간식
+사탕|간식|입에 넣고 녹여 먹는 단 과자
+과자|간식|바삭한 봉지 간식
+된장|음식|콩을 발효시킨 짭짤한 장
+고추장|음식|매콤한 붉은 장
+간장|음식|짠 검은 소스
+떡국|음식|설날에 먹는 흰 떡 국물 요리
+삼겹살|음식|구워 먹는 돼지고기 부위
+냉면|음식|차가운 육수의 면 요리
+수제비|음식|반죽을 떼어 넣은 국물 요리
+미역국|음식|생일에 먹는 국
+갈비|음식|양념해 구운 뼈 붙은 고기
+강아지|동물|멍멍 짖는 반려동물
+고양이|동물|야옹 하고 우는 반려동물
+토끼|동물|귀가 길고 깡충깡충 뛰는 동물
+사자|동물|백수의 왕
+호랑이|동물|줄무늬가 있는 한국 민화의 동물
+코끼리|동물|코가 길고 몸집이 큰 동물
+기린|동물|목이 아주 긴 동물
+원숭이|동물|바나나를 좋아하고 나무를 타는 동물
+다람쥐|동물|도토리를 모으는 작은 동물
+거북이|동물|등딱지가 있고 느릿느릿한 동물
+독수리|동물|하늘을 나는 큰 맹금류
+참새|동물|짹짹 우는 작은 새
+비둘기|동물|광장에 많은 평화의 상징 새
+나비|곤충|꽃에서 꿀을 빠는 날개 달린 곤충
+잠자리|곤충|가을 하늘을 나는 곤충
+개미|곤충|줄지어 다니는 부지런한 곤충
+모기|곤충|여름밤 피를 빨아 가려운 곤충
+고래|동물|바다에서 가장 큰 포유류
+상어|동물|날카로운 이빨을 가진 바다의 포식자
+문어|동물|다리가 여덟 개인 바다 생물
+물고기|동물|물속에 사는, 지느러미가 있는 생물
+하늘|자연|위로 올려다보면 푸른
+바다|자연|짠 물이 넓게 펼쳐진 곳
+구름|자연|하늘에 떠 있는 하얀 솜털
+무지개|자연|비 온 뒤 하늘에 뜨는 일곱 빛깔
+번개|자연|천둥 전에 번쩍이는 빛
+태풍|자연|강한 바람과 비를 몰고 오는 폭풍
+바람|자연|공기가 움직이는 것
+소나기|자연|갑자기 쏟아지다 그치는 비
+안개|자연|뿌옇게 시야를 가리는 수증기
+호수|자연|육지에 둘러싸인 큰 물
+바위|자연|큰 돌덩이
+폭포|자연|높은 곳에서 떨어지는 물줄기
+사막|자연|모래가 가득하고 비가 적은 곳
+우주|자연|별과 행성이 있는 거대한 공간
+지구|자연|우리가 사는 행성
+태양|자연|낮에 빛을 내는 별
+은하수|자연|밤하늘에 길게 흐르는 별무리
+보름달|자연|동그랗게 꽉 찬 달
+행성|자연|태양 주위를 도는 큰 천체
+나무|식물|숲을 이루는 큰 식물
+장미|식물|가시가 있는 사랑의 꽃
+민들레|식물|홀씨가 바람에 날리는 노란 꽃
+무궁화|식물|우리나라 꽃
+소나무|식물|사시사철 푸른 바늘잎 나무
+의자|가구|앉을 때 쓰는 가구
+책상|가구|공부할 때 쓰는 가구
+침대|가구|잠잘 때 눕는 가구
+냉장고|가전|음식을 시원하게 보관하는 기계
+세탁기|가전|빨래를 해 주는 기계
+청소기|가전|먼지를 빨아들이는 기계
+컴퓨터|전자|키보드와 모니터가 있는 기계
+전화기|전자|통화할 때 쓰는 기계
+휴대폰|전자|들고 다니는 전화
+시계|물건|시간을 알려 주는 물건
+안경|물건|눈이 나쁠 때 쓰는 물건
+우산|물건|비 올 때 쓰는 물건
+가방|물건|책 등을 넣어 메고 다니는 물건
+지갑|물건|돈과 카드를 넣는 물건
+열쇠|물건|문을 잠그고 여는 물건
+거울|물건|얼굴을 비춰 보는 물건
+연필|문구|흑연으로 쓰는 필기구
+지우개|문구|잘못 쓴 글씨를 지우는 물건
+공책|문구|글씨를 적는 얇은 책
+가위|도구|종이나 천을 자르는 도구
+망치|도구|못을 박는 도구
+장갑|옷|손에 끼는 것
+양말|옷|발에 신는 것
+모자|옷|머리에 쓰는 것
+바지|옷|두 다리에 입는 옷
+치마|옷|허리에서 아래로 두르는 옷
+신발|옷|발을 보호하며 신는 것
+운동화|옷|달릴 때 신는 신발
+학교|장소|학생이 공부하는 곳
+병원|장소|아픈 사람을 치료하는 곳
+도서관|장소|책을 빌려 읽는 곳
+공원|장소|산책하기 좋은 시민의 휴식처
+시장|장소|물건을 사고파는 곳
+극장|장소|영화를 보는 곳
+은행|장소|돈을 맡기고 찾는 곳
+식당|장소|음식을 사 먹는 곳
+놀이터|장소|아이들이 그네를 타는 곳
+미술관|장소|그림을 전시하는 곳
+동물원|장소|동물을 구경하는 곳
+수영장|장소|물에서 헤엄치는 곳
+기차역|장소|기차를 타는 곳
+공항|장소|비행기를 타는 곳
+자전거|교통|두 바퀴를 굴려 타는 탈것
+비행기|교통|하늘을 나는 큰 탈것
+기차|교통|철로 위를 달리는 탈것
+버스|교통|정류장에 서는 큰 차
+지하철|교통|땅속을 달리는 전철
+택시|교통|요금을 내고 타는 승용차
+자동차|교통|바퀴 네 개 달린 탈것
+엄마|가족|어머니를 친근하게 부르는 말
+아빠|가족|아버지를 친근하게 부르는 말
+할머니|가족|부모님의 어머니
+동생|가족|나보다 어린 형제
+친구|사람|가깝게 지내는 사람
+선생님|사람|학생을 가르치는 사람
+의사|직업|병을 고치는 사람
+경찰|직업|범인을 잡는 사람
+소방관|직업|불을 끄는 사람
+요리사|직업|음식을 만드는 사람
+가수|직업|노래하는 사람
+화가|직업|그림 그리는 사람
+음악|예술|소리로 표현하는 예술
+영화|예술|극장에서 보는 움직이는 그림
+사진|예술|카메라로 찍은 것
+노래|예술|목소리로 부르는 것
+운동|활동|몸을 움직이는 일
+축구|스포츠|발로 공을 차 골을 넣는 경기
+야구|스포츠|방망이로 공을 치는 경기
+농구|스포츠|공을 바구니에 넣는 경기
+수영|스포츠|물속을 헤엄치는 운동
+달리기|스포츠|빠르게 뛰는 운동
+여행|활동|낯선 곳을 다니는 일
+소풍|활동|도시락을 싸서 야외로 가는 일
+생일|기념일|태어난 날, 케이크를 먹는 날
+선물|물건|마음을 담아 주는 것
+편지|물건|손으로 써서 보내는 글
+약속|활동|서로 지키기로 한 것
+행복|감정|기쁘고 만족스러운 마음
+사랑|감정|아끼고 좋아하는 마음
+웃음|감정|기쁠 때 터지는 것
+눈물|감정|슬플 때 흐르는 것
+희망|감정|앞으로 잘될 거라는 기대
+우정|감정|친구 사이의 정
+시간|개념|흘러가는 것, 초와 분
+하루|개념|스물네 시간
+겨울|계절|눈이 오고 추운 계절
+여름|계절|덥고 장마가 오는 계절
+가을|계절|단풍이 드는 계절
+한복|전통|우리나라 전통 옷
+한글|전통|세종대왕이 만든 문자
+태극기|전통|우리나라 국기
+설날|전통|음력 1월 1일 명절
+추석|전통|한가위 보름달 명절
+세배|전통|설날에 절하며 인사하는 일
+윷놀이|전통|네 개의 윷가락을 던지는 놀이
+씨름|전통|샅바를 잡고 힘을 겨루는 운동
+김장|전통|겨울을 앞두고 김치를 대량으로 담그는 일
+</script>
+<script>
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch(e){ return d } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)) } catch(e){} }
+};
+/* ---------- 한글 처리 ---------- */
+const LS='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'.split(''), VS='ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'.split(''), TS=['',...'ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ'.split('')];
+const VDEC={'ㅘ':['ㅗ','ㅏ'],'ㅙ':['ㅗ','ㅐ'],'ㅚ':['ㅗ','ㅣ'],'ㅝ':['ㅜ','ㅓ'],'ㅞ':['ㅜ','ㅔ'],'ㅟ':['ㅜ','ㅣ'],'ㅢ':['ㅡ','ㅣ']};
+const FDEC={'ㄳ':['ㄱ','ㅅ'],'ㄵ':['ㄴ','ㅈ'],'ㄶ':['ㄴ','ㅎ'],'ㄺ':['ㄹ','ㄱ'],'ㄻ':['ㄹ','ㅁ'],'ㄼ':['ㄹ','ㅂ'],'ㄽ':['ㄹ','ㅅ'],'ㄾ':['ㄹ','ㅌ'],'ㄿ':['ㄹ','ㅍ'],'ㅀ':['ㄹ','ㅎ'],'ㅄ':['ㅂ','ㅅ']};
+const VCOMP={}, FCOMP={};
+for (const k in VDEC) VCOMP[VDEC[k].join('')]=k;
+for (const k in FDEC) FCOMP[FDEC[k].join('')]=k;
+const isC=j=>LS.includes(j), isV=j=>'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅛㅜㅠㅡㅣ'.includes(j), finOK=j=>!'ㄸㅃㅉ'.includes(j);
+
+/* 자모 배열 → 글자 묶음 (입력 도중의 미완성도 허용) */
+function parse(a){
+  const out=[]; let i=0;
+  while(i<a.length){
+    const s={idx:[],L:null,V:null,T:''};
+    if(isC(a[i])){ s.L=a[i]; s.idx.push(i); i++ }
+    if(i<a.length && isV(a[i])){
+      s.V=a[i]; s.idx.push(i); i++;
+      if(i<a.length && isV(a[i]) && VCOMP[s.V+a[i]]){ s.V=VCOMP[s.V+a[i]]; s.idx.push(i); i++ }
+    }
+    if(s.L!==null && s.V!==null && i<a.length && isC(a[i])){
+      const c1=a[i], c2=a[i+1], c3=a[i+2];
+      if(c2!==undefined && isV(c2)){ /* c1은 다음 글자의 초성 */ }
+      else if(c2!==undefined && isC(c2) && FCOMP[c1+c2] && !(c3!==undefined && isV(c3))){ s.T=FCOMP[c1+c2]; s.idx.push(i,i+1); i+=2 }
+      else if(finOK(c1)){ s.T=c1; s.idx.push(i); i++ }
+    }
+    s.ok = s.L!==null && s.V!==null;
+    s.ch = s.ok ? String.fromCharCode(0xAC00+(LS.indexOf(s.L)*21+VS.indexOf(s.V))*28+TS.indexOf(s.T)) : s.idx.map(k=>a[k]).join('');
+    out.push(s);
+  }
+  return out;
+}
+const sylParts = w => [...w].map(ch=>{ const c=ch.charCodeAt(0)-0xAC00; return {ch, L:LS[Math.floor(c/588)], V:VS[Math.floor(c/28)%21], T:TS[c%28]} });
+const partJamo = s => [s.L, ...(VDEC[s.V]||[s.V]), ...(s.T ? (FDEC[s.T]||[s.T]) : [])];
+const wordJamo = w => sylParts(w).flatMap(partJamo);
+const vowelJamo = v => VDEC[v]||[v];
+const finalJamo = t => t ? (FDEC[t]||[t]) : [];
+
+/* ---------- 단어 ---------- */
+const WORDS = $('#words').textContent.trim().split('\n').map(l=>{ const [w,c,d]=l.split('|'); return {w,c,d} });
+const SHIFT = {'ㅂ':'ㅃ','ㅈ':'ㅉ','ㄷ':'ㄸ','ㄱ':'ㄲ','ㅅ':'ㅆ','ㅐ':'ㅒ','ㅔ':'ㅖ'};
+const KB = [['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ'],['ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ','ENTER'],['SHIFT','ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ','BACK']];
+const ALLJ = KB.flat().filter(k=>k.length===1).concat(Object.values(SHIFT));
+const CODE = {KeyQ:'ㅂ',KeyW:'ㅈ',KeyE:'ㄷ',KeyR:'ㄱ',KeyT:'ㅅ',KeyY:'ㅛ',KeyU:'ㅕ',KeyI:'ㅑ',KeyO:'ㅐ',KeyP:'ㅔ',KeyA:'ㅁ',KeyS:'ㄴ',KeyD:'ㅇ',KeyF:'ㄹ',KeyG:'ㅎ',KeyH:'ㅗ',KeyJ:'ㅓ',KeyK:'ㅏ',KeyL:'ㅣ',KeyZ:'ㅋ',KeyX:'ㅌ',KeyC:'ㅊ',KeyV:'ㅍ',KeyB:'ㅠ',KeyN:'ㅜ',KeyM:'ㅡ'};
+
+const MODES = {
+  jamo:{name:'자모 분리', desc:'칸 하나 = 자음/모음 하나 · 예) 꼬들 → ㄲㅗㄷㅡㄹ'},
+  syl: {name:'글자 완성', desc:'글자를 완성해 맞혀요 · 글자 아래 막대 = 초성·중성·종성'},
+  cho: {name:'초성',     desc:'초성이 주어져요 · 중성·종성을 추리해 보세요'},
+};
+let cfg = Object.assign({mode:'jamo', tries:6, sylLen:2, jamoLen:6, contrast:false, theme:'auto'}, store.get('kordle.cfg', {}));
+let stats = Object.assign({played:0, wins:0, streak:0, max:0}, store.get('kordle.stats', {}));
+let G, draft;
+
+function applyLook(){
+  const r=document.documentElement;
+  cfg.contrast ? r.setAttribute('data-contrast','1') : r.removeAttribute('data-contrast');
+  cfg.theme==='auto' ? r.removeAttribute('data-theme') : r.setAttribute('data-theme', cfg.theme);
+}
+function pool(){
+  if (cfg.mode==='jamo') return WORDS.filter(x=> cfg.jamoLen>=8 ? wordJamo(x.w).length>=8 : wordJamo(x.w).length===cfg.jamoLen);
+  return WORDS.filter(x=>x.w.length===cfg.sylLen);
+}
+function newGame(){
+  const p = pool(); let a;
+  do { a = p[Math.floor(Math.random()*p.length)] } while (p.length>1 && G && a.w===G.answer.w);
+  const asyl = sylParts(a.w), ajam = wordJamo(a.w);
+  G = {mode:cfg.mode, answer:a, asyl, ajam, ajset:new Set(ajam),
+       n: cfg.mode==='jamo' ? ajam.length : asyl.length,
+       rows:[], buf:[], shift:false, over:false, won:false, busy:false, reveal:-1,
+       hintsUsed:0, hintPos:{}, hintIn:[], hintOut:[], showCho:false, mean:0, kb:{}};
+  buildKeyboard(); render();
+}
+function evaluate(g, a){
+  const res=Array(g.length).fill(0), left={};
+  for (let i=0;i<g.length;i++){ if (g[i]===a[i]) res[i]=2; else left[a[i]]=(left[a[i]]||0)+1 }
+  for (let i=0;i<g.length;i++){ if (res[i]!==2 && left[g[i]]>0){ res[i]=1; left[g[i]]-- } }
+  return res;
+}
+/* 글자 모드 막대: 초성·중성·종성 */
+function pipsFor(gs, as){
+  const inAns = parts => parts.some(p=>G.ajset.has(p));
+  const cmp = (g, a, dec) => g===a ? 2 : (g && inAns(dec(g)) ? 1 : 0);
+  const L = gs.L===as.L ? 2 : (G.ajset.has(gs.L)?1:0);
+  const V = gs.V===as.V ? 2 : (inAns(vowelJamo(gs.V))?1:0);
+  let T;
+  if (!gs.T && !as.T) T = -1;
+  else if (!gs.T) T = 0;
+  else T = gs.T===as.T ? 2 : (inAns(finalJamo(gs.T))?1:0);
+  return [L,V,T];
+}
+
+/* ---------- 화면 ---------- */
+function tileSize(){
+  const W = Math.min(innerWidth,520)-32, n=G.n;
+  const extra = G.mode==='jamo' ? 24 : 0, pipH = G.mode==='jamo' ? 0 : 8;
+  const byW = (W-(n-1)*6-extra)/n;
+  const avail = innerHeight-490;
+  const byH = (avail-(cfg.tries-1)*6-cfg.tries*pipH)/cfg.tries;
+  return Math.max(30, Math.min(G.mode==='jamo'?62:80, byW, byH));
+}
+function cellHtml(txt, cls, i, sp, extra){
+  return `<div class="cell${sp?' sp':''}"><div class="tile ${cls}" style="--i:${i}">${txt}</div>${extra||''}</div>`;
+}
+const ST = ['absent','present','correct'];
+function render(){
+  $('#modeLabel').textContent = `${MODES[G.mode].name} · ${G.n}${G.mode==='jamo'?'칸':'글자'} · ${cfg.tries}번`;
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.m===cfg.mode));
+  $('#modeDesc').textContent = MODES[G.mode].desc;
+  const showCho = G.mode==='cho' || G.showCho;
+  $('#clue').innerHTML = showCho ? `<span>초성</span>${G.asyl.map(s=>`<span class="chip">${s.L}</span>`).join('')}` : '';
+  $('#hintbar').classList.toggle('four', G.mode==='cho');
+  document.querySelector('[data-h="cho"]').style.display = G.mode==='cho' ? 'none' : '';
+  const b = $('#board'); b.style.setProperty('--ts', tileSize()+'px');
+  const parsed = parse(G.buf), cur = G.rows.length;
+  let html='';
+  for (let r=0;r<cfg.tries;r++){
+    let cells='', win='';
+    if (r < G.rows.length){
+      const row=G.rows[r], rv = r===G.reveal ? ' rv' : '';
+      if (G.mode==='jamo'){
+        cells = row.jamo.map((j,i)=>cellHtml(j, ST[row.st[i]]+rv, i, row.starts.has(i) && i>0)).join('');
+      } else {
+        cells = row.syl.map((s,i)=>{
+          const p=row.pips[i];
+          const pip = p.map((x,k)=>`<div class="pip ${x<0||(G.mode==='cho'&&k===0)?'none':ST[x]}"></div>`).join('');
+          return cellHtml(s.ch, 'syl '+ST[row.st[i]]+rv, i, false, `<div class="pips${rv?' late':''}" style="--n:${G.n}">${pip}</div>`);
+        }).join('');
+      }
+      if (r===G.rows.length-1 && G.won && r!==G.reveal) win=' win';
+      html += `<div class="row${win}">${cells}</div>`; continue;
+    }
+    if (r===cur && !G.over){
+      if (G.mode==='jamo'){
+        const starts=new Set(parsed.map(s=>s.idx[0]));
+        for (let i=0;i<G.n;i++){
+          let cls='', t='';
+          if (i<G.buf.length){ t=G.buf[i]; cls='filled' } else if (G.hintPos[i]){ t=G.hintPos[i]; cls='hint' }
+          if (i===G.buf.length) cls+=' sel';
+          cells += cellHtml(t, cls, i, starts.has(i)&&i>0);
+        }
+      } else {
+        for (let i=0;i<G.n;i++){
+          let cls='syl', t='';
+          if (i<parsed.length){ t=parsed[i].ch; cls+=' filled' }
+          else if (G.hintPos[i]){ t=G.hintPos[i]; cls+=' hint' }
+          else if (G.mode==='cho'){ t=G.asyl[i].L; cls+=' hint' }
+          if (i===Math.max(0,parsed.length-1) && G.buf.length) cls+=' sel'; else if (!G.buf.length && i===0) cls+=' sel';
+          cells += cellHtml(t, cls, i, false, `<div class="pips"><div class="pip none"></div><div class="pip none"></div><div class="pip none"></div></div>`);
+        }
+      }
+      html += `<div class="row">${cells}</div>`; continue;
+    }
+    for (let i=0;i<G.n;i++) cells += cellHtml('', G.mode==='jamo'?'':'syl', i, false, G.mode==='jamo'?'':`<div class="pips"><div class="pip none"></div><div class="pip none"></div><div class="pip none"></div></div>`);
+    html += `<div class="row">${cells}</div>`;
+  }
+  b.innerHTML = html;
+  $('#preview').innerHTML = G.over ? '' : (G.buf.length
+    ? `${parsed.map(s=>s.ch).join('')}${G.mode==='jamo'?'':''}<small>${G.mode==='jamo'?`${G.buf.length} / ${G.n}칸`:`${parsed.length} / ${G.n}글자`}</small>`
+    : `<small>${G.mode==='jamo'?'자음과 모음을 눌러 입력하세요':'자음과 모음을 눌러 글자를 만드세요'}</small>`);
+  $('#info').textContent = G.over ? '' : `${G.rows.length+1} / ${cfg.tries} 번째 시도${G.hintsUsed?` · 힌트 ${G.hintsUsed}회`:''}`;
+  renderKeys(); renderHints();
+  document.querySelectorAll('.hbtn').forEach(x=>x.disabled=G.over);
+}
+function buildKeyboard(){
+  const k=$('#keyboard'); k.innerHTML='';
+  KB.forEach(line=>{
+    const row=document.createElement('div'); row.className='krow';
+    line.forEach(key=>{
+      const b=document.createElement('button'); b.className='key'; b.dataset.k=key;
+      if (key==='ENTER'){ b.textContent='확인'; b.classList.add('wide') }
+      else if (key==='SHIFT'){ b.textContent='⇧'; b.classList.add('wide'); b.setAttribute('aria-label','쌍자음 (Shift)') }
+      else if (key==='BACK'){ b.classList.add('wide'); b.setAttribute('aria-label','지우기');
+        b.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" style="display:block;pointer-events:none"><path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H7.07L2.4 12l4.66-7H22v14zm-11.59-2L14 13.41 17.59 17 19 15.59 15.41 12 19 8.41 17.59 7 14 10.59 10.41 7 9 8.41 12.59 12 9 15.59z"/></svg>' }
+      row.appendChild(b);
+    });
+    k.appendChild(row);
+  });
+}
+function renderKeys(){
+  document.querySelectorAll('.key').forEach(k=>{
+    const base=k.dataset.k;
+    k.classList.remove('correct','present','absent');
+    if (base==='SHIFT'){ k.classList.toggle('on', G.shift); return }
+    if (base.length!==1) return;
+    const ch = G.shift && SHIFT[base] ? SHIFT[base] : base;
+    k.textContent = ch; k.dataset.j = ch;
+    const s=G.kb[ch]; if (s) k.classList.add(s);
+  });
+}
+function renderHints(){
+  const p=[];
+  const pos=Object.keys(G.hintPos).sort((a,b)=>a-b);
+  if (pos.length) p.push(`<div class="chips"><span class="lbl">위치</span>${pos.map(i=>`<span class="chip pos">${+i+1}번째 ${G.hintPos[i]}</span>`).join('')}</div>`);
+  if (G.hintIn.length) p.push(`<div class="chips"><span class="lbl">포함</span>${G.hintIn.map(x=>`<span class="chip in">${x}</span>`).join('')}</div>`);
+  if (G.hintOut.length) p.push(`<div class="chips"><span class="lbl">없음</span>${G.hintOut.map(x=>`<span class="chip out">${x}</span>`).join('')}</div>`);
+  if (G.mean>=1) p.push(`<div class="chips"><span class="lbl">분류</span><b>${G.answer.c}</b></div>`);
+  if (G.mean>=2) p.push(`<div class="chips"><span class="lbl">뜻</span><span>${G.answer.d}</span></div>`);
+  $('#hints').innerHTML=p.join('');
+}
+let toastT;
+function toast(msg, ms=1800){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),ms) }
+
+/* ---------- 입력 ---------- */
+function pushJamo(j){
+  if (G.over||G.busy) return;
+  const nb=[...G.buf,j];
+  if (G.mode==='jamo' ? nb.length>G.n : parse(nb).length>G.n){ toast(G.mode==='jamo'?`${G.n}칸이 가득 찼어요 · 지우거나 확인을 누르세요`:`${G.n}글자가 가득 찼어요`); return }
+  G.buf=nb; if (G.shift) G.shift=false; render();
+}
+function backspace(){ if (G.over||G.busy) return; G.buf.pop(); render() }
+function shakeRow(msg, ms){
+  toast(msg, ms);
+  const rows=$('#board').children, r=rows[G.rows.length]; if(!r) return;
+  r.classList.remove('shake'); void r.offsetWidth; r.classList.add('shake');
+}
+function strictError(parsed){
+  for (const s of parsed){
+    if (s.ok) continue;
+    if (s.L===null) return `'${s.V}'는 앞에 자음이 필요해요 (소리 없는 첫 자음은 ㅇ)`;
+    return `'${s.L}' 뒤에 모음이 필요해요`;
+  }
+  return null;
+}
+function submit(){
+  if (G.over||G.busy) return;
+  const parsed=parse(G.buf);
+  if (!G.buf.length) return shakeRow('글자를 입력하세요');
+  const err=strictError(parsed); if (err) return shakeRow(err, 2600);
+  if (G.mode==='jamo' && G.buf.length<G.n) return shakeRow(`칸이 부족해요 (${G.buf.length} / ${G.n})`);
+  if (G.mode!=='jamo' && parsed.length<G.n) return shakeRow(`${G.n}글자를 만들어 주세요 (지금 ${parsed.length}글자)`);
+  let row;
+  if (G.mode==='jamo'){
+    row={jamo:[...G.buf], st:evaluate(G.buf, G.ajam), starts:new Set(parsed.map(s=>s.idx[0]))};
+  } else {
+    const gs=parsed.map(s=>({ch:s.ch,L:s.L,V:s.V,T:s.T}));
+    if (G.mode==='cho'){
+      const bad=gs.findIndex((s,i)=>s.L!==G.asyl[i].L);
+      if (bad>=0) return shakeRow(`${bad+1}번째 글자의 초성은 ${G.asyl[bad].L}이어야 해요`);
+    }
+    row={syl:gs, st:evaluate(gs.map(s=>s.ch), G.asyl.map(s=>s.ch)), pips:gs.map((s,i)=>pipsFor(s,G.asyl[i]))};
+  }
+  G.rows.push(row); G.buf=[]; G.busy=true; G.reveal=G.rows.length-1;
+  const idx=G.reveal;
+  render();
+  setTimeout(()=>{
+    // 키보드 색
+    const rank={absent:0,present:1,correct:2}, setKb=(j,s)=>{ if(!G.kb[j]||rank[s]>rank[G.kb[j]]) G.kb[j]=s };
+    if (G.mode==='jamo') row.jamo.forEach((j,i)=>setKb(j, ST[row.st[i]]));
+    else row.syl.forEach((s,i)=>{
+      const pp=row.pips[i], exact=row.st[i]===2;
+      const mark=(js,p)=>js.forEach(j=>setKb(j, exact||p===2 ? 'correct' : (G.ajset.has(j)?'present':'absent')));
+      mark([s.L],pp[0]); mark(vowelJamo(s.V),pp[1]); mark(finalJamo(s.T),pp[2]);
+    });
+    const guess = G.mode==='jamo' ? parse(row.jamo).map(s=>s.ch).join('') : row.syl.map(s=>s.ch).join('');
+    G.busy=false; G.reveal=-1;
+    if (guess===G.answer.w){ G.over=true; G.won=true }
+    else if (G.rows.length>=cfg.tries) G.over=true;
+    render();
+    if (G.over) finish();
+  }, G.n*250+600);
+}
+function finish(){
+  stats.played++;
+  if (G.won){ stats.wins++; stats.streak++; stats.max=Math.max(stats.max,stats.streak) } else stats.streak=0;
+  store.set('kordle.stats',stats);
+  setTimeout(showResult, G.won?1200:500);
+}
+function showResult(){
+  const h=G.hintsUsed?` · 힌트 ${G.hintsUsed}번 사용`:'';
+  const a=G.answer;
+  $('#result').innerHTML = (G.won
+    ? `<div class="big">🎉 정답!</div><div>${G.rows.length}번 만에 맞혔어요${h}</div>`
+    : `<div class="big">아쉬워요 😢</div><div>정답은</div>`)
+    + `<div class="ans" style="margin:12px 0;letter-spacing:.1em">${a.w}</div><div style="font-size:13px;color:var(--muted)">${a.c} · ${a.d}</div>`;
+  openDlg('#dResult');
+}
+function shareText(){
+  const e=['⬛','🟨','🟩'];
+  return `한글 워들 ${MODES[G.mode].name} ${G.won?G.rows.length:'X'}/${cfg.tries} (힌트 ${G.hintsUsed})\n`+G.rows.map(r=>r.st.map(x=>e[x]).join('')).join('\n');
+}
+
+/* ---------- 힌트 (무제한) ---------- */
+function knownGreen(){
+  const s=new Set(Object.keys(G.hintPos).map(Number));
+  G.rows.forEach(r=>r.st.forEach((x,i)=>{ if(x===2) s.add(i) }));
+  return s;
+}
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function hint(kind){
+  if (G.over||G.busy) return;
+  const A = G.mode==='jamo' ? G.ajam : G.asyl.map(s=>s.ch);
+  if (kind==='pos'){
+    const k=knownGreen(), free=[...Array(G.n).keys()].filter(i=>!k.has(i));
+    if (!free.length) return toast('모든 자리를 이미 알고 있어요!');
+    const i=pick(free); G.hintPos[i]=A[i];
+  } else if (kind==='in'){
+    const known=new Set(G.hintIn);
+    Object.entries(G.kb).forEach(([j,s])=>{ if(s!=='absent') known.add(j) });
+    Object.values(G.hintPos).forEach(v=>[...v].forEach(ch=>{ (ch.charCodeAt(0)>=0xAC00 ? partJamo(sylParts(ch)[0]) : [ch]).forEach(j=>known.add(j)) }));
+    const opts=[...G.ajset].filter(j=>!known.has(j));
+    if (!opts.length) return toast('들어 있는 글자를 이미 모두 알고 있어요!');
+    G.hintIn.push(pick(opts));
+  } else if (kind==='out'){
+    const used=new Set([...G.hintOut, ...Object.keys(G.kb)]);
+    const opts=ALLJ.filter(j=>!G.ajset.has(j)&&!used.has(j));
+    if (!opts.length) return toast('더 알려 줄 없는 글자가 없어요');
+    const j=pick(opts); G.hintOut.push(j); G.kb[j]='absent';
+  } else if (kind==='cho'){
+    if (G.showCho) return toast('초성을 이미 보여 주고 있어요');
+    G.showCho=true;
+  } else if (kind==='mean'){
+    if (G.mean>=2) return toast('더 알려 줄 설명이 없어요');
+    G.mean++;
+  }
+  G.hintsUsed++; render();
+}
+
+/* ---------- 이벤트 ---------- */
+document.addEventListener('keydown', e=>{
+  if (document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key==='Enter'){ e.preventDefault(); submit() }
+  else if (e.key==='Backspace'){ e.preventDefault(); backspace() }
+  else if (CODE[e.code]){
+    e.preventDefault();
+    const b=CODE[e.code]; pushJamo(e.shiftKey && SHIFT[b] ? SHIFT[b] : b);
+  }
+});
+$('#keyboard').addEventListener('click', e=>{
+  const b=e.target.closest('.key'); if(!b) return; const k=b.dataset.k; b.blur();
+  if (k==='ENTER') submit();
+  else if (k==='BACK') backspace();
+  else if (k==='SHIFT'){ G.shift=!G.shift; renderKeys() }
+  else pushJamo(b.dataset.j||k);
+});
+$('#hintbar').addEventListener('click', e=>{ const b=e.target.closest('.hbtn'); if(b){ hint(b.dataset.h); b.blur() } });
+$('#tabs').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b||b.dataset.m===cfg.mode) return;
+  cfg.mode=b.dataset.m; store.set('kordle.cfg',cfg); newGame();
+});
+window.addEventListener('resize', ()=>{ if(G) $('#board').style.setProperty('--ts', tileSize()+'px') });
+function openDlg(s){ const d=$(s); if(!d.open) d.showModal() }
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
+$('#btnHelp').onclick=()=>openDlg('#dHelp');
+$('#btnStats').onclick=()=>{
+  $('#sPlayed').textContent=stats.played; $('#sWin').textContent=stats.played?Math.round(stats.wins/stats.played*100):0;
+  $('#sStreak').textContent=stats.streak; $('#sMax').textContent=stats.max; openDlg('#dStats');
+};
+$('#statsReset').onclick=()=>{ stats={played:0,wins:0,streak:0,max:0}; store.set('kordle.stats',stats); $('#btnStats').click() };
+$('#rNew').onclick=()=>{ $('#dResult').close(); newGame() };
+$('#rShare').onclick=async()=>{ try{ await navigator.clipboard.writeText(shareText()); toast('결과를 복사했어요') }catch(e){ toast('복사할 수 없어요') } };
+
+/* 설정 */
+function renderSettings(){
+  const jamo = cfg.mode==='jamo';
+  $('#lenTitle').textContent = jamo ? '칸 수 (자음·모음 개수)' : '글자 수';
+  const opts = jamo ? [4,5,6,7,8] : [2,3], cur = jamo ? draft.jamoLen : draft.sylLen;
+  $('#segLen').innerHTML = opts.map(n=>`<button data-len="${n}" class="${cur===n?'on':''}">${jamo?(n>=8?'8칸 이상':n+'칸'):n+'글자'}</button>`).join('');
+  $('#tries').value=draft.tries; $('#tryVal').textContent=draft.tries+'번';
+  $('#contrast').checked=draft.contrast; $('#theme').value=draft.theme;
+}
+$('#btnSet').onclick=()=>{ draft=Object.assign({},cfg); renderSettings(); openDlg('#dSet') };
+$('#segLen').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if (cfg.mode==='jamo') draft.jamoLen=+b.dataset.len; else draft.sylLen=+b.dataset.len; renderSettings();
+});
+$('#tries').oninput=e=>{ draft.tries=+e.target.value; renderSettings() };
+$('#contrast').onchange=e=>{ draft.contrast=cfg.contrast=e.target.checked; applyLook() };
+$('#theme').onchange=e=>{ draft.theme=cfg.theme=e.target.value; applyLook() };
+$('#setClose').onclick=()=>$('#dSet').close();
+$('#setApply').onclick=()=>{ cfg=Object.assign({},draft); store.set('kordle.cfg',cfg); applyLook(); $('#dSet').close(); newGame() };
+
+applyLook();
+if (!store.get('kordle.seen',false)){ store.set('kordle.seen',true); setTimeout(()=>openDlg('#dHelp'),300) }
+newGame();
+</script>
+</body>
+</html>

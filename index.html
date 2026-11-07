@@ -91,6 +91,7 @@ input[type=range]{width:150px;accent-color:var(--accent)}
 input[type=checkbox]{appearance:none;-webkit-appearance:none;width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .2s;margin:0}
 input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 input[type=checkbox]:checked{background:var(--accent)}input[type=checkbox]:checked::after{transform:translateX(20px)}
+a.lnk{color:var(--accent);font-size:14px;text-decoration:none;white-space:nowrap}
 select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
 .actions{display:flex;gap:8px;margin-top:16px}
 .btn{flex:1;border:0;border-radius:10px;padding:12px;font:inherit;font-weight:700;cursor:pointer;background:var(--accent);color:#fff}
@@ -137,6 +138,7 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--lin
   <div class="opt"><div><span data-i18n="set.hard"></span><small data-i18n="set.hardSub"></small></div><input type="checkbox" id="hard"></div>
   <div class="opt"><div><span data-i18n="set.contrast"></span><small data-i18n="set.contrastSub"></small></div><input type="checkbox" id="contrast"></div>
   <div class="opt"><div data-i18n="set.theme"></div><select id="theme"><option value="auto" data-i18n="theme.auto"></option><option value="light" data-i18n="theme.light"></option><option value="dark" data-i18n="theme.dark"></option></select></div>
+  <div class="opt"><div data-i18n="set.ko"></div><a class="lnk" href="ko.html" data-i18n="open"></a></div>
   <div class="opt"><div data-i18n="set.lang"></div><select id="lang"><option value="en">English</option><option value="ko">한국어</option></select></div>
   <h3 data-i18n="set.cw"></h3>
   <div class="cw"><input id="cwInput" type="text" maxlength="6" data-i18n-ph="cw.ph" placeholder="4–6 letter English word" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn sec" id="cwPlay" data-i18n="cw.play"></button><button class="btn sec" id="cwLink" data-i18n="cw.link"></button></div>
@@ -194,7 +196,7 @@ let stats = Object.assign({played:0, wins:0, streak:0, max:0}, store.get('wordle
 
 const I18N = {
 en:{
- app:'Wordle', backspace:'Delete', help:'Help', stats:'Statistics', settings:'Settings', board:'Game board', close:'Close', gotit:'Got it', share:'Copy result', newgame:'New game', delete:'Delete',
+ app:'Wordle', 'set.ko':'Korean Wordle (한글 워들)', open:'Open →', backspace:'Delete', help:'Help', stats:'Statistics', settings:'Settings', board:'Game board', close:'Close', gotit:'Got it', share:'Copy result', newgame:'New game', delete:'Delete',
  'h.pos':'Position','h.pos.s':'Reveal a spot','h.in':'Contains','h.in.s':'A letter inside','h.out':'Excluded','h.out.s':'A missing letter','h.left':'Candidates','h.left.s':'Words left',
  'set.title':'Difficulty settings','set.presets':'Presets','set.mine':'My presets <span style="font-weight:400">(save &amp; load your current settings)</span>',
  'set.len':'Word length','set.tries':'Attempts','set.pool':'Word difficulty','set.hard':'Hard mode','set.hardSub':'Revealed hints (green/yellow) must be used in later guesses',
@@ -218,7 +220,7 @@ en:{
  cwInvalid:'Enter a 4–6 letter English word', cwStart:'Playing your custom word', linkCopied:'Link copied', linkPrompt:'Copy this link', friend:'A friend’s challenge!'
 },
 ko:{
- app:'워들', backspace:'지우기', help:'도움말', stats:'통계', settings:'설정', board:'게임 보드', close:'닫기', gotit:'알겠어요', share:'결과 복사', newgame:'새 게임', delete:'삭제',
+ app:'워들', 'set.ko':'한글 워들 (자모·글자·초성)', open:'열기 →', backspace:'지우기', help:'도움말', stats:'통계', settings:'설정', board:'게임 보드', close:'닫기', gotit:'알겠어요', share:'결과 복사', newgame:'새 게임', delete:'삭제',
  'h.pos':'위치','h.pos.s':'자리 공개','h.in':'포함','h.in.s':'들어간 글자','h.out':'제외','h.out.s':'없는 글자','h.left':'후보','h.left.s':'남은 수',
  'set.title':'난이도 설정','set.presets':'프리셋','set.mine':'내 프리셋 <span style="font-weight:400">(현재 설정을 저장해 두고 불러오기)</span>',
  'set.len':'글자 수','set.tries':'도전 횟수','set.pool':'단어 난이도','set.hard':'하드 모드','set.hardSub':'드러난 힌트(초록·노랑)를 다음 추측에 반드시 사용',
